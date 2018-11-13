@@ -80,6 +80,9 @@ def childInstances() {
     } else {
         return dynamicPage(name: "childInstances", nextPage: "ctPreferences", install: false, uninstall: true) {
             section {
+                app(appName: "Circadian Daylight", namespace: "claytonjn", title: "New Circadian Daylight Setup", multiple: true)
+            }
+            section {
                 paragraph "Thank you for installing Circadian Daylight! This application adjusts your lights to simulate the light of the sun, which has been proven to aid in cognitive functions and restfulness."
             }
         }
@@ -99,7 +102,7 @@ def ctPreferences() {
 def locationPreferences() {
     return dynamicPage(name: "locationPreferences", nextPage: "updatePreferences", install: false, uninstall: true) {
         section("Zip Code Override") {
-            input "lZip", "number", title: "Change if you want to simulate behavior of a zip code other than the one set for your SmartThings hub, or if you don't have a location set for your SmartThings hub.", required: false, defaultValue: location.zipCode
+            input "lZip", "number", title: "Change if you want to simulate behavior of a zip code other than the one set for your Hubitat hub, or if you don't have a location set for your Hubitat hub.", required: false, defaultValue: location.zipCode
         }
         section ("Sunrise offset (optional)...") {
     		input "lSunriseOffsetValue", "text", title: "HH:MM", required: false
