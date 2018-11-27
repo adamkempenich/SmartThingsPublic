@@ -67,23 +67,17 @@ preferences {
     page(name: "childInstances", content: "childInstances")
     page(name: "ctPreferences", content: "ctPreferences")
     page(name: "locationPreferences", content: "locationPreferences")
-    page(name: "updatePreferences", content:"updatePreferences")
 }
 
 def childInstances() {
-    if(settings.updateNotifications != NULL) { //use this because boolean input should always have some value
-        return dynamicPage(name: "childInstances", nextPage: "ctPreferences", install: false, uninstall: true) {
-            section {
-                app(appName: "Circadian Daylight", namespace: "claytonjn", title: "New Circadian Daylight Setup", multiple: true)
-            }
-        }
-    } else {
-        return dynamicPage(name: "childInstances", nextPage: "ctPreferences", install: false, uninstall: true) {
-            section {
-                paragraph "Thank you for installing Circadian Daylight! This application adjusts your lights to simulate the light of the sun, which has been proven to aid in cognitive functions and restfulness."
-            }
-        }
-    }
+	return dynamicPage(name: "childInstances", nextPage: "ctPreferences", install: false, uninstall: true) {
+		section {
+			app(appName: "Circadian Daylight", namespace: "claytonjn", title: "New Circadian Daylight Setup", multiple: true)
+		}
+		section {
+			paragraph "Thank you for installing Circadian Daylight! This application adjusts your lights to simulate the light of the sun, which has been proven to aid in cognitive functions and restfulness."
+		}
+	}
 }
 
 def ctPreferences() {
@@ -97,9 +91,9 @@ def ctPreferences() {
 }
 
 def locationPreferences() {
-    return dynamicPage(name: "locationPreferences", nextPage: "updatePreferences", install: false, uninstall: true) {
+    return dynamicPage(name: "locationPreferences", install: true, uninstall: true) {
         section("Zip Code Override") {
-            input "lZip", "number", title: "Change if you want to simulate behavior of a zip code other than the one set for your SmartThings hub, or if you don't have a location set for your SmartThings hub.", required: false, defaultValue: location.zipCode
+            input "lZip", "number", title: "Change if you want to simulate behavior of a zip code other than the one set for your Hubitat hub, or if you don't have a location set for your Hubitat hub.", required: false, defaultValue: location.zipCode
         }
         section ("Sunrise offset (optional)...") {
     		input "lSunriseOffsetValue", "text", title: "HH:MM", required: false
@@ -118,32 +112,6 @@ def locationPreferences() {
         section("Sunset Time") {
             input "lSunsetTime", "time", title: "Enter a specific time you want Circadian Daylight to use for sunset.", required: false
         }
-    }
-}
-
-def updatePreferences() {
-    return dynamicPage(name: "updatePreferences", install: true, uninstall: true) {
-        section("Update Notifications") {
-			paragraph 	"Get push notifications when an update is pushed to GitHub."
-			input(		name: 			"updateNotifications",
-						type:			"bool",
-						title:			"Update Notifications",
-                        defaultValue:   false,
-						submitOnChange:	true	)
-			if (updateNotifications) {
-				input("recipients", "contact", title: "Send notifications to") {
-					input "updatePush", "bool", title: "Send push notifications", required: false
-				}
-				input(		name:			"gitHubBranch",
-							type:			"enum",
-							title: 			"Branch",
-							description:	"Get notifications for the stable or beta branch?",
-							options:		["Stable", "Beta"],
-							defaultValue:	"Stable",
-							multiple:		true,
-							required:		true	)
-			}
-		}
     }
 }
 
@@ -168,9 +136,7 @@ private def initialize() {
     subscribe(location, "sunset", setHandler)
     subscribe(location, "mode", setHandler)
     schedule("0 */15 * * * ?", setHandler)
-
-    checkForUpdates()
-
+	
     setHandler() //Set state variables from initial install
 }
 
@@ -193,17 +159,6 @@ void setHandler(evt) {
         	sunriseAndSunset.sunset = new Date().parse("yyyy-MM-dd'T'HH:mm:ss.SSSZ", todayLSunsetTime)
 		}
     }
-
-    if (settings.updateNotifications == true) {
-		for (message in checkForUpdates()) {
-            // check that contact book is enabled and recipients selected
-            if (location.contactBookEnabled && recipients) {
-                sendNotificationToContacts(message, recipients, [event: false])
-            } else if (updatePush) { // check that the user did select a phone number
-                sendPushMessage(message)
-            }
-        }
-	}
 
     calcColorTemperature(sunriseAndSunset)
     bulbsHandler(sunriseAndSunset)
@@ -260,32 +215,4 @@ private getSunriseOffset() {
 
 private getSunsetOffset() {
 	lSunsetOffsetValue ? (lSunsetOffsetDir == "Before" ? "-$lSunsetOffsetValue" : lSunsetOffsetValue) : null
-}
-
-def checkForUpdates() {
-	def messages = []
-	for (branch in settings.gitHubBranch) {
-		def branchName
-		if (branch == "Stable") { branchName = "Circadian-Daylight" }
-		if (branch == "Beta") { branchName = "Circadian-Daylight-Development" }
-
-		def url = "https://api.github.com/repos/claytonjn/SmartThingsPublic/branches/${branchName}"
-
-		def result = null
-
-		try {
-			httpGet(uri: url) {response ->
-				result = response
-			}
-			def latestCommitTime = result.data.commit.commit.author.date
-			if (latestCommitTime != state."last${branch}Update") {
-				state."last${branch}Update" = result.data.commit.commit.author.date
-                messages << "Circadian Daylight ${branch} branch updated with message: ${result.data.commit.commit.message}"
-			}
-		}
-		catch (e) {
-			log.warn e
-		}
-	}
-	return messages
 }
